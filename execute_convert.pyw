@@ -56,13 +56,13 @@ def _execute_split(cmd: str) -> dict:
     except:
         raise McCmdSyntaxError  
 
-    detect = {
+    block = {
         "position":pos,
         "block":block,
         "data":data,
     }
 
-    ret["if_block"] = detect
+    ret["if_block"] = block
     return ret
 
     
