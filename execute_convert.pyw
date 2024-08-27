@@ -19,31 +19,12 @@ def _execute_split(cmd: str) -> dict:
         raise McCmdSyntaxError
     cmd = cmd[res.end():].strip()
     
-    selector = r"@\w"
+    selector = r'@\w[\s]*(\[([^"\]]*|(\"([^\"]*)\")*)*\])?'
     res = re.match(selector,cmd)
     if res is None:
         raise McCmdSyntaxError
     ret["selector"] = res.group()
     cmd = cmd[res.end():].strip()
-    if cmd[0] == "[":
-        s0 = False # ""
-        s1 = False # ''
-        for i in range(len(cmd)):
-            if not s1 and (cmd[i] == '"'):
-                if not s0: s0 = True
-                else : s0 = False
-            elif not s0 and (cmd[i] == "'"):
-                if not s1: s1 = True
-                else : s1 = False
-            elif (not (s0 or s1)) and (cmd[i] == "]"):
-                ret['selector'] += cmd[:i+1]
-                cmd = cmd[i+1:].strip()
-                break
-        else:
-            # for - else(no break)
-            # 不能找到 ']'
-            raise McCmdSyntaxError
-
     pos = r"[\s]*([~^][\-\.\d]*|[\d]*)" * 3
     res = re.match(pos,cmd)
     if res is None:
@@ -85,7 +66,7 @@ def _execute_split(cmd: str) -> dict:
     return ret
 
     
-def execute_convert(cmd: str) -> str:
+def execute_convert(cmd: str, optimize: bool = False) -> str:
     """
     只进行命令转换，不检查除execute语法，支持execute嵌套并进行简单优化
     Exception:  McCmdSyntaxError
@@ -97,7 +78,10 @@ def execute_convert(cmd: str) -> str:
     while True:
         cmd_args = _execute_split(cmd)
         nexe_is_execute = (re.match(r"execute|/execute",cmd_args['sub_command']) is not None)
-        if nexe_is_execute:
+        if not optimize:
+            ret += f"as {cmd_args["selector"]} at @s "
+
+        elif nexe_is_execute:
             if not _execute_split(cmd_args["sub_command"])["selector"].find("@s") == -1:
                 ret += f"as {cmd_args["selector"]} "
             # 旧版execute嵌套中，执行者不需要更改为前面execute的执行者，因为最终执行者在最后
@@ -139,7 +123,10 @@ if __name__ == "__main__":
             tk.Label(self.root,text="旧execute",font=("微软雅黑",18),width=10,height=1).place(x=0,y=4) 
             self.cmd_input = scrolledtext.ScrolledText(self.root,font=("微软雅黑",18),width = 40,height = 7)
             self.cmd_input.place(x=10,y=40)
-            tk.Button(self.root,text="生成指令",font=("微软雅黑",18),width=10,height=2,command=self._show_cmd).place(x=180,y=300)
+            tk.Button(self.root,text="生成指令",font=("微软雅黑",18),width=10,height=2,command=self._show_cmd).place(x=100,y=300)
+            self.optimize = tk.BooleanVar(value=False)
+            tk.Checkbutton(self.root,font=("微软雅黑",18),width=15,height=3,text="优化as/at\n(可能有bug)"
+                           ,variable=self.optimize,onvalue=True,offvalue=False).place(x=300,y=300)
             self.root.mainloop()
             
             
@@ -153,7 +140,7 @@ if __name__ == "__main__":
             except AttributeError:
                 pass
             try:
-                info = execute_convert(self.cmd_input.get(1.0,"end"))
+                info = execute_convert(self.cmd_input.get(1.0,"end"),self.optimize.get())
             except:
                 messagebox.showerror("execute转换器","execute指令格式错误!")
                 return
