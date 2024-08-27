@@ -19,7 +19,7 @@ def _execute_split(cmd: str) -> dict:
         raise McCmdSyntaxError
     cmd = cmd[res.end():].strip()
     
-    selector = r'@\w[\s]*(\[([^"\]]*|("([^"]*)")*)*\])?'
+    selector = r'@\w[\s]*(\[(([^\[\]])|("([^"]*)")|(\[[^\[\]]*\]))*\])?'
     res = re.match(selector,cmd)
     if res is None:
         raise McCmdSyntaxError
